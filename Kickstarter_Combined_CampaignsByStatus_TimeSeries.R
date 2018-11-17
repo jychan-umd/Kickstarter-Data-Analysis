@@ -1,12 +1,65 @@
+#_____ Calling all libraries _____#
+
+install.packages("ggplot2")
+
+
 #______ Starting with the cleaned file (12 Nov 2018) ______ #
 
-Kickstarter_Complete_Cleaned <- read.csv("/users/Janice/Documents/Grad school 2018/INFM600/Team project/Kickstarter_Complete_Cleaned.cs")
+Kickstarter_Complete_Cleaned <- read.csv("/users/Janice/Documents/Grad school 2018/INFM600/Team project/Kickstarter_Complete_Cleaned.csv")
 
 #_____ Owen Henry _____#
 
 drop_cols <- names(Kickstarter_Complete_Cleaned) %in% c("name", "country", "deadline", "usd.pledged")
 
-dataset <- Kickstarter_Complete_Cleaned[!drop_cols]
+datasetFull <- Kickstarter_Complete_Cleaned[!drop_cols]
+
+#_____ Exclude outliers (pledge, backers, goal) using 1.5xIQR rule _____#
+  # reference: https://www.khanacademy.org/math/statistics-probability/summarizing-quantitative-data/box-whisker-plots/a/identifying-outliers-iqr-rule 
+
+class(datasetFull$pledged)
+class(datasetFull$goal)
+class(datasetFull$backers)
+
+  # Ensure values are numeric for goal and backers
+
+datasetFull2 <- datasetFull
+datasetFull2$goal <- as.numeric(as.character(datasetFull$goal))
+
+datasetFull3 <- datasetFull2
+datasetFull3$backers <- as.numeric(as.character(datasetFull2$backers))
+
+ ########## Find and exclude outliers for pledged # HELP!
+medianPledged <- median(datasetFull3$pledged, na.rm = TRUE) # The value is 615L ?????
+bottomHalfPledged <- subset(datasetFull3, datasetFull3$pledged < medianPledged)
+Q1pledged <- median(bottomHalfPledged$pledged)
+topHalfPledged <- subset(datasetFull3, datasetFull3$pledged > medianPledged)
+Q3pledged <- median(topHalfPledged$pledged)
+IQRpledged <- Q3pledged - Q1pledged
+lowPledged <- subset(datasetFull3, pledged < (Q1pledged - (1.5 * IQRpledged))) # appeared to be 0 matching?
+highPledged <- subset(datasetFull3, pledged > (Q3pledged + (1.5 * IQRpledged)))
+
+# outliersPledged <- c(lowPledged, highPledged) # this is completely blank
+# datasetFull4 <- datasetFull3[!outliersPledged]
+  # Error in !outliersPledged : invalid argument type
+
+datasetFull4 <- datasetFull3[!highPledged] 
+# error message from line above:
+  #Warning messages:
+  #1: In Ops.factor(left) : ‘!’ not meaningful for factors
+  #2: In Ops.factor(left) : ‘!’ not meaningful for factors
+  #3: In Ops.factor(left) : ‘!’ not meaningful for factors
+  #4: In Ops.factor(left) : ‘!’ not meaningful for factors
+
+##############
+
+
+  # Find and exclude outliers for goal
+
+  # Find and exclude outliers for backers
+
+
+# at end, dataset excluding outliers goes into "dataset" for sections below
+
 
 #_____ Vyjayanthi Kamath _____#
 
@@ -15,11 +68,9 @@ table(dataset$state)
 View(dataset)
 
 
-#_____ Time Series Analysis - Owen Henry _____#
+#_____ Time Series Analysis - Owen Henry _____# 
 
 dataset$launched <- as.Date(dataset$launched, format = "%m/%d/%Y" )
-
-install.packages("ggplot2")
 
 dataset$launched_year <- format(dataset$launched,"%Y")
 
