@@ -92,25 +92,27 @@ dataset$launched <- as.Date(dataset$launched, format = "%m/%d/%Y" )
 
 dataset$launched_year <- format(dataset$launched,"%Y")
 
-dataset$launched_month <- format(dataset$launched, "%B")
+dataset$launched_year
 
-success_fail_subset <- subset(dataset, state=='successful' | state=='failed')
+dataset$launched_month <- format(dataset$launched, "%B")
 
 success_subset <- subset(dataset, state=='successful')
 
-failed_subset <- subset(dataset, state == 'failed')
+failed_subset <- subset(dataset, state != 'successful')
 
-all_aggr_data = aggregate(success_fail_subset$state, by=list(Category = dataset$launched_year), FUN=length)
+all_aggr_data = aggregate(dataset$state, by=list(Category = dataset$launched_year), FUN=length)
 
 success_aggr = aggregate(success_subset$state, by=list(Category = success_subset$launched_year), FUN=length)
 
 failed_aggr = aggregate(failed_subset$state, by=list(Category = failed_subset$launched_year), FUN=length)
 
-plot(aggr_data$Category, aggr_data$x, type = "l")
+class(all_aggr_data)
 
-plot(success_aggr$category, success_aggr$x, type = "l")
+all_aggr_data$successful = success_aggr$x
 
-plot(failed_aggr$Category, failed_aggr$x, type = "l")
+all_aggr_data$failed = failed_aggr$x
+
+all_aggr_data
 
 #_____ Successful Campaigns Analysis - Janice Chan ______#
 
@@ -168,18 +170,7 @@ medianGoalByCat
 
 # plotting work - Outliers? Y-axis on Mean Pledged plot?
 
-plot(meanPledgedByCat$Category, meanPledgedByCat$MeanPledged, type = "p")
 
-plot(medianPledgedByCat$Category, medianPledgedByCat$MedianPledged, type = "p")
-
-
-plot(meanBackersByCat$Category, meanBackersByCat$MeanBackers, type = "p")
-
-plot(medianBackersByCat$Category, medianBackersByCat$MedianBackers, type = "p")
-
-plot(meanGoalByCat$Category, meanGoalByCat$MeanGoal, type = "p")
-
-plot(medianGoalByCat$Category, medianGoalByCat$MedianGoal, type = "p")
 
 
 #______ Failed Campaigns Analysis - Vyjayanthi Kamath _____#
@@ -199,22 +190,49 @@ median_backers<-median(failed_final$backers, na.rm=TRUE)
 
 #finding mean and median pledged amounts
 cat_pledged_mean<-aggregate(failed_final$pledged, by=list(category=failed_final$main_category), FUN=mean,
-                              na.rm = TRUE)
+                            na.rm = TRUE)
 cat_pledged_med<-aggregate(failed_final$pledged, by=list(category=failed_final$main_category), FUN=median,
-                             na.rm = TRUE)
+                           na.rm = TRUE)
 
 #finding mean and median goal
 cat_goal_mean<-aggregate(failed_final$goal, by=list(category=failed_final$main_category), 
-                           FUN=mean, na.rm = TRUE)
+                         FUN=mean, na.rm = TRUE)
 cat_goal_median<-aggregate(failed_final$goal, by=list(category=failed_final$main_category), 
-                         FUN=median, na.rm = TRUE)
+                           FUN=median, na.rm = TRUE)
 
 #finding mean and median backers
 cat_backers_mean<-aggregate(failed_final$backers, by=list(category=failed_final$main_category), 
-                              FUN=mean, na.rm = TRUE)
+                            FUN=mean, na.rm = TRUE)
 
 cat_backers_med<-aggregate(failed_final$backers, by=list(category=successfulUSD3$main_category), 
-                             FUN=median, na.rm = TRUE)
+                           FUN=median, na.rm = TRUE)
+
+
+#ALL PLOTS GO HERE
+
+ggplot( x = all_aggr_data$Category, y = all_aggr_data$x, xlab = 'Year', ylab = 'Total Kickstarters', main = "Count of Kickstarters Over Time", geom = "line", )
+
+#Step 1: Plot Owen's Time Series Data
+ggplot(data = all_aggr_data, aes(x=Category, y=x))
+
+plot(success_aggr$category, success_aggr$x, type = "l")
+
+plot(failed_aggr$Category, failed_aggr$x, type = "l")
+
+plot(meanPledgedByCat$Category, meanPledgedByCat$MeanPledged, type = "p")
+
+plot(medianPledgedByCat$Category, medianPledgedByCat$MedianPledged, type = "p")
+
+
+plot(meanBackersByCat$Category, meanBackersByCat$MeanBackers, type = "p")
+
+plot(medianBackersByCat$Category, medianBackersByCat$MedianBackers, type = "p")
+
+plot(meanGoalByCat$Category, meanGoalByCat$MeanGoal, type = "p")
+
+plot(medianGoalByCat$Category, medianGoalByCat$MedianGoal, type = "p")
+
+
 
 
 
