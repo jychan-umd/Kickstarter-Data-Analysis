@@ -5,7 +5,7 @@ install.packages("ggplot2")
 
 #______ Starting with the cleaned file (12 Nov 2018) ______ #
 
-Kickstarter_Complete_Cleaned <- read.csv("/users/Janice/Documents/Grad school 2018/INFM600/Team project/Kickstarter_Complete_Cleaned.csv")
+Kickstarter_Complete_Cleaned <- read.csv("/users/Janice/Documents/Grad school 2018/INFM600/Team project/ks-projects-201801.csv")
 
 #_____ Owen Henry _____#
 
@@ -20,46 +20,64 @@ class(datasetFull$pledged)
 class(datasetFull$goal)
 class(datasetFull$backers)
 
-  # Ensure values are numeric for goal and backers
+  # Ensure values are numeric for pledged, goal, and backers
 
 datasetFull2 <- datasetFull
-datasetFull2$goal <- as.numeric(as.character(datasetFull$goal))
+datasetFull2$pledged <- as.numeric(as.character(datasetFull$pledged))
 
-datasetFull3 <- datasetFull2
-datasetFull3$backers <- as.numeric(as.character(datasetFull2$backers))
+datasetFull3 <- datasetFull
+datasetFull3$goal <- as.numeric(as.character(datasetFull2$goal))
 
- ########## Find and exclude outliers for pledged # HELP!
-medianPledged <- median(datasetFull3$pledged, na.rm = TRUE) # The value is 615L ?????
-bottomHalfPledged <- subset(datasetFull3, datasetFull3$pledged < medianPledged)
+datasetFull4 <- datasetFull3
+datasetFull4$backers <- as.numeric(as.character(datasetFull3$backers))
+
+  # Find and exclude outliers for pledged 
+medianPledged <- median(datasetFull4$pledged, na.rm = TRUE) 
+bottomHalfPledged <- subset(datasetFull4, datasetFull4$pledged < medianPledged)
 Q1pledged <- median(bottomHalfPledged$pledged)
-topHalfPledged <- subset(datasetFull3, datasetFull3$pledged > medianPledged)
+topHalfPledged <- subset(datasetFull4, datasetFull4$pledged > medianPledged)
 Q3pledged <- median(topHalfPledged$pledged)
 IQRpledged <- Q3pledged - Q1pledged
-lowPledged <- subset(datasetFull3, pledged < (Q1pledged - (1.5 * IQRpledged))) # appeared to be 0 matching?
-highPledged <- subset(datasetFull3, pledged > (Q3pledged + (1.5 * IQRpledged)))
+lowPledged <- subset(datasetFull4, datasetFull4$pledged < (Q1pledged - (1.5 * IQRpledged))) # there were 0 matching
+highPledged <- subset(datasetFull4, datasetFull4$pledged > (Q3pledged + (1.5 * IQRpledged)))
+highPledged_min = min(highPledged$pledged)
+datasetFull5 <- subset(datasetFull4, pledged < highPledged_min)
 
-# outliersPledged <- c(lowPledged, highPledged) # this is completely blank
-# datasetFull4 <- datasetFull3[!outliersPledged]
-  # Error in !outliersPledged : invalid argument type
-
-datasetFull4 <- datasetFull3[!highPledged] 
-# error message from line above:
-  #Warning messages:
-  #1: In Ops.factor(left) : ‘!’ not meaningful for factors
-  #2: In Ops.factor(left) : ‘!’ not meaningful for factors
-  #3: In Ops.factor(left) : ‘!’ not meaningful for factors
-  #4: In Ops.factor(left) : ‘!’ not meaningful for factors
-
-##############
+# outliersPledged <- c(lowPledged, highPledged) # suspect this may cause an issue if 0 lowPledged
+# datasetFull4 <- datasetFull4[!outliersPledged] # Error in !outliersPledged : invalid argument type
+# datasetFull4 <- datasetFull4[!highPledged] # error for this, too: In Ops.factor(left) : ‘!’ not meaningful for factors
 
 
-  # Find and exclude outliers for goal
+  ### Find and exclude outliers for goal ### NEED TO FIX SOMETHING WITH THE lowGoal_max
+medianGoal <- median(datasetFull5$goal, na.rm = TRUE) 
+bottomHalfGoal <- subset(datasetFull5, datasetFull5$goal < medianGoal)
+Q1goal <- median(bottomHalfGoal$goal)
+topHalfGoal <- subset(datasetFull5, datasetFull5$goal > medianGoal)
+Q3goal <- median(topHalfGoal$goal)
+IQRgoal <- Q3goal - Q1goal
+lowGoal <- subset(datasetFull5, datasetFull5$goal < (Q1goal - (1.5 * IQRgoal))) 
+lowGoal_max = max(lowGoal$goal) # warning: In max(lowGoal$goal) : no non-missing arguments to max; returning -Inf
+highGoal <- subset(datasetFull5, datasetFull5$goal > (Q3goal + (1.5 * IQRgoal)))
+highGoal_min = min(highGoal$goal)
+datasetFull6 <- subset(datasetFull5, (datasetFull5$goal < highGoal_min) & (datasetFull5$goal > lowGoal_max))
 
-  # Find and exclude outliers for backers
+  ### Find and exclude outliers for backers ### NEED TO FIX SOMETHING WITH THE lowBackers_max AND highBackers_min
 
+medianBackers <- median(datasetFull6$backers, na.rm = TRUE) 
+bottomHalfBackers <- subset(datasetFull6, datasetFull6$backers < medianBackers)
+Q1backers <- median(bottomHalfBackers$backers)
+topHalfBackers <- subset(datasetFull6, datasetFull6$backers < medianBackers)
+Q3backers <- median(topHalfGoal$goal)
+IQRbackers <- Q3backers - Q1backers
+lowBackers <- subset(datasetFull6, datasetFull6$backers < (Q1backers - (1.5 * IQRbackers))) 
+lowBackers_max = max(lowBackers$backers) # warning: In max(lowBackers$backers) :  no non-missing arguments to max; returning -Inf
+highBackers <- subset(datasetFull6, datasetFull6$backers > (Q3backers + (1.5 * IQRbackers))) 
+highBackers_min = min(highBackers$backers) # warning: In min(highBackers$backers) : no non-missing arguments to min; returning Inf
+datasetFull7 <- subset(datasetFull6, (datasetFull6$backers < highBackers_min) & (datasetFull6$backers > lowBackers_max)) # right now, datasetFull7 is the same as datasetFull6
 
-# at end, dataset excluding outliers goes into "dataset" for sections below
+# dataset excluding outliers to be used for rest of script
 
+dataset <- datasetFull7
 
 #_____ Vyjayanthi Kamath _____#
 
