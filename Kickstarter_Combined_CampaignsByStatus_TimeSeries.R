@@ -176,10 +176,6 @@ medianGoalByCat <- aggregate(successfulUSD3$goal, by=list(category=successfulUSD
 colnames(medianGoalByCat) <- c("Category", "MedianGoal")
 medianGoalByCat
 
-# plotting work - Outliers? Y-axis on Mean Pledged plot?
-
-
-
 
 #______ Failed Campaigns Analysis - Vyjayanthi Kamath _____#
 
@@ -216,7 +212,8 @@ cat_backers_med<-aggregate(failed_final$backers, by=list(category=successfulUSD3
                            FUN=median, na.rm = TRUE)
 class(all_aggr_data$Category)
 
-#ALL PLOTS GO HERE
+#_____ ALL PLOTS GO HERE _____#
+
 #This plots Owen's data on successful vs. failed vs. all kickstarters over time
 
 df = melt(all_aggr_data, id=c("Category"))
@@ -225,11 +222,12 @@ ggplot(df) +
   geom_line(aes(x=Category, y=value, colour = variable, group = variable)) + 
   scale_colour_manual(values = c("red", "blue", "green"))
 
-
 ggplot( x = all_aggr_data$Category, y = all_aggr_data$x, xlab = 'Year', ylab = 'Total Kickstarters', main = "Count of Kickstarters Over Time" )
+#plot above still in progress and may need some restructuring/reformatting of dataframes since we had previously worked independently on script portions
+
+# plots below are initial, still in progress
 
 plot(medianPledgedByCat$Category, medianPledgedByCat$MedianPledged, type = "p")
-
 
 plot(meanBackersByCat$Category, meanBackersByCat$MeanBackers, type = "p")
 
