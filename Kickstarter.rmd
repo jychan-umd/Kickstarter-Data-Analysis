@@ -1,33 +1,14 @@
 ---
-title: "R Notebook"
+title: "So you want to start a Kickstarter campaign: Know before you go"
 output: html_notebook
 self_contained: no
 ---
-
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
-```{r}
-plot(cars)
-```
-
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
-
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
-
----
-
-**NEED TO UPDATE TITLE TO MATCH SLIDES AND TAKE OUT HELP TEXT ABOVE**
-
 
 # About This Notebook {-}
 
 This notebook is for the Git Package submission for the INFM600 Team Project for the team of Vyjayanthi Kamath, Owen Henry, and Janice Chan, during the Fall 2018 semester.
 
-Not included in this notebook: Presentation slides, which are available at **NEED LINK HERE**
+Not included in this notebook: Presentation slides, which are available at https://github.com/OwenJaniceVyjayanthiINFM600/Kickstarter-Data-Analysis/blob/master/Kickstart%20your%20way%20to%20success.pptx
 
 -----------------------------
 
@@ -86,26 +67,346 @@ We performed the following operations on the file prior to analysis:
 
 # Data Analysis Script and Outputs
 
+Script is also available on GitHub: https://github.com/OwenJaniceVyjayanthiINFM600/Kickstarter-Data-Analysis/blob/master/Kickstarter_final.R
 
-**INSERT FINAL CONSOLIDATED VERSION HERE INCLUDING PLOTS **
+```{r}
+#_____ Calling all libraries _____#
+
+install.packages("ggplot2")
+
+library(ggplot2)
+library(reshape2)
+library(plyr)
+
+
+Kickstarter_Complete_Cleaned <- read.csv(".\\ks-projects-201801.csv")
+
+drop_cols <- names(Kickstarter_Complete_Cleaned) %in% c("name", "country", "deadline", "usd.pledged")
+
+datasetFull <- Kickstarter_Complete_Cleaned[!drop_cols]
+
+#_____ Exclude outliers (pledge, backers, goal) using 1.5xIQR rule _____#
+# reference: https://www.khanacademy.org/math/statistics-probability/summarizing-quantitative-data/box-whisker-plots/a/identifying-outliers-iqr-rule 
+
+# Ensure values are numeric for pledged, goal, and backers
+
+datasetFull2 <- datasetFull
+datasetFull2$pledged <- as.numeric(as.character(datasetFull$pledged))
+
+datasetFull3 <- datasetFull
+datasetFull3$goal <- as.numeric(as.character(datasetFull2$goal))
+
+datasetFull4 <- datasetFull3
+datasetFull4$backers <- as.numeric(as.character(datasetFull3$backers))
+
+# Find and exclude outliers for pledged 
+#Step 1: Find the median
+medianPledged <- median(datasetFull4$pledged, na.rm = TRUE)
+#Step 2: Define the lower half of the dataset
+bottomHalfPledged <- subset(datasetFull4, datasetFull4$pledged < medianPledged)
+#Step 3: Define the lower quartile
+Q1pledged <- median(bottomHalfPledged$pledged)
+#Step 4: Define the upper half of the dataset
+topHalfPledged <- subset(datasetFull4, datasetFull4$pledged > medianPledged)
+#Step 5: Define the upper quartile
+Q3pledged <- median(topHalfPledged$pledged)
+#Step 6: Define the interquartile range, which all outlier observations should be outside of
+IQRpledged <- Q3pledged - Q1pledged
+#Step 7: Remove all outliers
+datasetFull5 <- subset(datasetFull4, (pledged > (Q1pledged - (1.5 * IQRpledged))) && pledged < (Q3pledged + (1.5 * IQRpledged)))
+
+
+### Find and exclude outliers for goal ###
+#Step 1: Find the median
+medianGoal <- median(datasetFull5$goal, na.rm = TRUE) 
+#Step 2: Define the lower half of the dataset
+bottomHalfGoal <- subset(datasetFull5, datasetFull5$goal < medianGoal)
+#Step 3: Define the lower quartile
+Q1goal <- median(bottomHalfGoal$goal)
+#Step 4: Define the upper half of the dataset
+topHalfGoal <- subset(datasetFull5, datasetFull5$goal > medianGoal)
+#Step 5: Define the upper quartile
+Q3goal <- median(topHalfGoal$goal)
+#Step 6: Define the interquartile range, which all outlier observations should be outside of
+MedianIQRgoal <- Q3goal - Q1goal
+upper_goal = Q3goal + (1.5 * MedianIQRgoal)
+lower_goal = Q1goal - (1.5 * MedianIQRgoal)
+#Step 7: Remove all outliers
+datasetFull6 <- subset(datasetFull5, (datasetFull5$goal < (Q3goal + (1.5 * MedianIQRgoal))) & (datasetFull5$goal > (Q1goal - (1.5 * MedianIQRgoal))))
+
+### Find and exclude outliers for backers ###
+#Step 1: Find the median
+medianBackers <- median(datasetFull6$backers, na.rm = TRUE) 
+#Step 2: Define the lower half of the dataset
+bottomHalfBackers <- subset(datasetFull6, datasetFull6$backers < medianBackers)
+#Step 3: Define the lower quartile
+Q1backers <- median(bottomHalfBackers$backers)
+#Step 4: Define the upper half of the dataset
+topHalfBackers <- subset(datasetFull6, datasetFull6$backers < medianBackers)
+#Step 5: Define the upper quartile
+Q3backers <- median(topHalfGoal$goal)
+#Step 6: Define the interquartile range, which all outlier observations should be outside of
+IQRbackers <- Q3backers - Q1backers
+#Step 7: Remove all outliers
+datasetFull7 <- subset(datasetFull6, (datasetFull6$backers < (Q3backers + (1.5 * IQRbackers))) && (datasetFull6$backers > (Q1backers - (1.5 * IQRbackers))))
+
+# dataset excluding outliers to be used for rest of script
+
+dataset <- datasetFull7
+
+#_____ Time Series Analysis Plot_____# 
+
+dataset$launched <- as.Date(dataset$launched, format = "%m/%d/%Y" )
+
+dataset$launched_year <- format(dataset$launched,"%Y")
+
+dataset <- subset(dataset, dataset$launched_year != 2018)
+
+dataset$launched_month <- format(dataset$launched, "%B")
+
+success_subset <- subset(dataset, state=='successful')
+
+failed_subset <- subset(dataset, state != 'successful')
+
+all_aggr_data = aggregate(dataset$state, by=list(Category = dataset$launched_year), FUN=length)
+
+success_aggr = aggregate(success_subset$state, by=list(Category = success_subset$launched_year), FUN=length)
+
+failed_aggr = aggregate(failed_subset$state, by=list(Category = failed_subset$launched_year), FUN=length)
+
+all_aggr_data$successful = as.numeric(as.character(success_aggr$x))
+
+all_aggr_data$failed = as.numeric(as.character(failed_aggr$x))
+
+colnames(all_aggr_data)[2] <- 'All'
+
+#_____ Successful Campaigns Analysis ______#
+
+# looking at only successful campaigns
+
+successfulCampaigns <- subset(dataset,state=="successful")
+
+# below is on successful campaigns where currency is USD
+successfulUSD <- subset(successfulCampaigns,currency=="USD")
+
+# clean up of backers
+successfulUSD2 <- successfulUSD
+successfulUSD2$backers <- as.numeric(as.character(successfulUSD$backers))
+
+# clean up of goal
+successfulUSD3 <- successfulUSD2
+successfulUSD3$goal <- as.numeric(as.character(successfulUSD2$goal))
+
+# by categories
+
+meanBackersByCat <- aggregate(successfulUSD3$backers, by=list(category=successfulUSD3$main_category), FUN=mean, na.rm = TRUE)
+colnames(meanBackersByCat) <- c("Category", "MeanBackers")
+
+meanGoalByCat <- aggregate(successfulUSD3$goal, by=list(category=successfulUSD3$main_category), FUN=mean, na.rm = TRUE)
+colnames(meanGoalByCat) <- c("Category", "MeanGoal")
+
+
+#______ Failed Campaigns Analysis _____#
+
+failed<-subset(dataset, currency == 'USD' & state=="failed")
+failed_final<-failed
+failed_final$backers<-as.numeric(as.character(failed$backers))
+failed_final$goal<-as.numeric(as.character(failed$goal))
+
+#finding mean and median goal
+cat_goal_mean<-aggregate(failed_final$goal, by=list(category=failed_final$main_category), 
+                         FUN=mean, na.rm = TRUE)
+
+colnames(cat_goal_mean) <- c("Category", "MeanGoal")
+
+#finding mean backers for failed ks
+cat_backers_mean<-aggregate(failed_final$backers, by=list(category=failed_final$main_category), 
+                            FUN=mean, na.rm = TRUE)
+
+colnames(cat_backers_mean) <- c("Category", "MeanBackers")
+
+#Compute the average price per unit of all successful kickstarters
+target_ppu = (meanGoalSuccessfulUSD / meanBackersSuccessfulUSD)
+
+ppu_frame <- meanGoalByCat
+ppu_frame["meanbackers"] <- meanBackersByCat$MeanBackers
+ppu_frame["PricePerUnit"] <- (ppu_frame$MeanGoal / meanBackersByCat$MeanBackers)
+
+```
+
+
+
+This plots successful vs. failed vs. all kickstarters over time - Graph 1
+```{r}
+colnames(all_aggr_data)[3] <- "Success"
+colnames(all_aggr_data)[4] <- "Fail"
+
+df = melt(all_aggr_data, id=c("Category"))
+
+ggplot(df) + 
+  geom_line(aes(x=Category, y=value, colour = variable, group = variable)) + 
+  scale_colour_manual(values = c("red", "blue", "green")) + ggtitle("Count of Kickstarters Over Time")
+```
+
+
+
+This plots Mean Goal by Category - Graph 2
+```{r}
+colnames(meanGoalByCat)[2] <- "MeanGoal"
+
+ggplot(data = meanGoalByCat, aes(x=Category, y=MeanGoal)) +
+  geom_bar(aes(fill=Category), stat="identity") + 
+  coord_flip() + 
+  ggtitle("Successful Kickstarters - Mean Goal by Category") +
+  theme(legend.position="none")
+
+```
+
+
+
+This plots average goals successful vs. failed for categories - Graph 3
+```{r}
+graph3plot <- meanGoalByCat
+graph3plot["failed_goal"] <- cat_goal_mean$MeanGoal
+
+colnames(graph3plot)[2] <- "Success"
+colnames(graph3plot)[3] <- "Fail"
+
+df = melt(graph3plot, id=c("Category"))
+
+colnames(df)[3] <- "MeanGoal"
+
+ggplot(df, aes(Category, MeanGoal)) +
+  geom_bar(aes(fill=variable), position = "dodge", stat = "identity") +
+  coord_flip()
+
+```
+
+
+
+This plots the Mean Price Per Unit for each category of Kickstarter - Graph 4
+```{r}
+ggplot(ppu_frame, aes(Category, PricePerUnit)) +
+  geom_bar(aes(fill=Category), stat="identity") + 
+  coord_flip() + 
+  ggtitle("Average Price Per Unit by Category") +
+  theme(legend.position="none")
+```
+
+
+
+This plots the mean number of backers for each category - Graph 5
+```{r}
+graph5plot <-meanBackersByCat
+graph5plot["Fail"] <- cat_backers_mean$MeanBackers
+colnames(graph5plot)[2] <- "Success"
+
+df = melt(graph5plot, id=c("Category"))
+
+colnames(df)[3] <- "MeanBackers"
+
+ggplot(df, aes(Category, MeanBackers)) +
+  geom_bar(aes(fill=variable), position = "dodge", stat = "identity") +
+coord_flip()
+```
+
+
 
 -----------------------------
 
 # Written Summary
 
-**UP TO 500 WORDS - JANICE WILL INSERT AFTER WE EDIT FULLY IN GOOGLE DOC**
+Our audience consists of people based in the US who have a project or business idea who are considering a Kickstarter campaign to raise funds and who are trying to figure out the best way to approach it.  For example, our persona Adam, has an idea for an app.  He is considering launching a Kickstarter campaign to help him get his business started.  
+
+Some decisions our audience will need to make include:
+* Given the category my project falls in, is it financially worth doing Kickstarter?
+* In that category, what am I likely to receive in pledges?  Should I adjust my goal?
+* How many backers (at the average contribution amount for my category) will I need to succeed?
+
+The source data consisted of campaign-level records of Kickstarter campaigns.  It included project information, such as the unique ID, its name, its category and subcategory, etc.  It also included campaign information such as the goal, deadline, currency, launch date, total amount pledged, state (failed, successful, or cancelled), number of backers, etc.
+
+Besides general data cleaning as described in the data preparation process, we also chose to remove the outliers for the pledges, goals, and backers, using the 1.5xIQR outlier rule, as you can see in the R script. 
+
+***Insert Graph 4 of Mean Price Per Unit***
+
+Our analysis found that successful Kickstarters usually have a Mean Price Per Unit (Goal/Backers) of $32.42, although this obviously varies widely across categories.  Successful Kickstarters would need at least 187 backers on average, or to ship at least 187 units.  
+
+We argue first that potential Kickstarter candidates must know this number for their category and subcategory in order to determine whether it is financially worth it for them to launch a Kickstarter campaign.  The average contribution to a Kickstarter campaign is essentially the product’s market price.  If the market price is a viable one--that is, their product costs less to produce than the Mean Price Per Unit--then this number should factor into how they structure their campaign.  They would be wise to look at the average goal for successful Kickstarters in the relevant category in order to set their goal appropriately, as many failed Kickstarters simply set goals that were above what the market would bear.  In addition, the average number of backers per category can help them set their own goals for how many backers they need to get and should inform how they structure their backer levels.  
+
+But the bottom line is that the Mean Price Per Unit must be above the cost per unit, or Kickstarter will not be a viable funding source.  Then campaign launchers can strategize on how to maximize profits by increasing that difference.
+
 
 -----------------------------
 
 # Presentation Slides
 
-Our presentation slides are available at **NEED LINK HERE**
+Our presentation slides are available at https://github.com/OwenJaniceVyjayanthiINFM600/Kickstarter-Data-Analysis/blob/master/Kickstart%20your%20way%20to%20success.pptx. 
 
 -----------------------------
 
 # Contributorship
 
-**JANICE WILL INSERT ONCE FINALIZED IN GOOGLE DOC**
+Project management - Janice Chan
+
+GitHub repository management - Owen Henry
+
+
+R script/plots
+
+* Data cleaning - Owen Henry
+
+* Remove outliers - Janice Chan
+
+* Time series analysis - Owen Henry
+
+* Successful campaigns analysis - Janice Chan
+
+* Failed campaigns analysis - Vyjayanthi Kamath
+
+* Combining scripts from each contributor - Janice Chan
+
+* Time series plots - Owen Henry
+
+* Mean campaign goals, pledges, backers plots - Vyjayanthi Kamath
+
+* Median campaign goals, pledges, backers plots - Owen Henry
+
+* Refactoring, finalizing R script and plots - Owen Henry
+
+
+Written portions
+
+* Work plan - Janice Chan
+
+* Gantt chart - Vyjayanthi Kamath
+
+* Data preparation document - Owen Henry
+
+* Written summary 
+
+  - Audience and decisions - Janice Chan
+  
+  - Source data and processing - Janice Chan
+  
+  - Figure/plot - Owen Henry
+  
+  - Interpretation - Owen Henry
+  
+  - Persuasive argument to audience re: analysis - Janice Chan
+  
+* Persona - team started in class, Janice Chan finalized
+
+
+Presentation 
+
+* Introduction - Janice Chan
+
+* Analysis - Owen Henry
+
+* Recommendations - Vyjayanthi Kamath
+
+* Delivery - all
+
 
 -----------------------------
 
